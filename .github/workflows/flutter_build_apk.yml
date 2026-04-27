@@ -2,6 +2,16 @@ name: Flutter Build APK
 
 on:
   workflow_dispatch:
+    inputs:
+      job_id:
+        description: 'Job ID'
+        required: true
+      zip_path:
+        description: 'APK Output Path'
+        required: true
+      zip_url:
+        description: 'ZIP Source URL'
+        required: true
 
 jobs:
   build:
@@ -10,6 +20,18 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
+
+      - name: Show Inputs
+        run: |
+          echo "JOB_ID: ${{ github.event.inputs.job_id }}"
+          echo "ZIP_PATH: ${{ github.event.inputs.zip_path }}"
+          echo "ZIP_URL: ${{ github.event.inputs.zip_url }}"
+
+      - name: Download ZIP Source
+        run: wget "${{ github.event.inputs.zip_url }}" -O source.zip
+
+      - name: Extract ZIP
+        run: unzip source.zip -d source_code
 
       - name: Setup Java
         uses: actions/setup-java@v4
@@ -23,13 +45,15 @@ jobs:
           flutter-version: 3.22.0
 
       - name: Install Dependencies
+        working-directory: source_code
         run: flutter pub get
 
       - name: Build APK
+        working-directory: source_code
         run: flutter build apk --release
 
-      - name: Upload APK
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: release-apk
-          path: build/app/outputs/flutter-apk/app-release.apk
+          name: ${{ github.event.inputs.job_id }}
+          path: source_code/${{ github.event.inputs.zip_path }}
